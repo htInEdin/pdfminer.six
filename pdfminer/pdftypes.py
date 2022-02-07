@@ -5,15 +5,15 @@ import sys
 from typing import (TYPE_CHECKING, Any, Dict, Iterable, Optional, Union, List,
                     Tuple, cast)
 
-from .lzw import lzwdecode
+from . import settings
 from .ascii85 import ascii85decode
 from .ascii85 import asciihexdecode
-from .runlength import rldecode
 from .ccitt import ccittfaxdecode
+from .lzw import lzwdecode
+from .psparser import LIT
 from .psparser import PSException
 from .psparser import PSObject
-from .psparser import LIT
-from . import settings
+from .runlength import rldecode
 from .utils import apply_png_predictor
 
 if TYPE_CHECKING:
@@ -33,6 +33,7 @@ LITERALS_RUNLENGTH_DECODE = (LIT('RunLengthDecode'), LIT('RL'))
 LITERALS_CCITTFAX_DECODE = (LIT('CCITTFaxDecode'), LIT('CCF'))
 LITERALS_DCT_DECODE = (LIT('DCTDecode'), LIT('DCT'))
 LITERALS_JBIG2_DECODE = (LIT('JBIG2Decode'),)
+LITERALS_JPX_DECODE = (LIT('JPXDecode'),)
 
 
 if sys.version_info >= (3, 8):
@@ -87,7 +88,6 @@ class PDFObjRef(PDFObject):
                 raise PDFValueError('PDF object id cannot be 0.')
         self.doc = doc
         self.objid = objid
-        return
 
     def __repr__(self) -> str:
         return '<PDFObjRef:%d>' % (self.objid)
@@ -218,7 +218,7 @@ def stream_value(x: object) -> "PDFStream":
     return x
 
 
-def decompress_corrupted(data):
+def decompress_corrupted(data: bytes) -> bytes:
     """Called on some data that can't be properly decoded because of CRC checksum
     error. Attempt to decode it skipping the CRC.
     """
@@ -254,12 +254,10 @@ class PDFStream(PDFObject):
         self.data: Optional[bytes] = None
         self.objid: Optional[int] = None
         self.genno: Optional[int] = None
-        return
 
     def set_objid(self, objid: int, genno: int) -> None:
         self.objid = objid
         self.genno = genno
-        return
 
     def __repr__(self) -> str:
         if self.data is None:
@@ -354,6 +352,8 @@ class PDFStream(PDFObject):
                 # Just return the stream to the user.
                 pass
             elif f in LITERALS_JBIG2_DECODE:
+                pass
+            elif f in LITERALS_JPX_DECODE:
                 pass
             elif f == LITERAL_CRYPT:
                 # not yet..

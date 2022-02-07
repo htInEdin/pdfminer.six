@@ -1,16 +1,20 @@
+import itertools
 import logging
-from pdfminer.utils import Rect
 from typing import BinaryIO, Container, Dict, Iterator, List, Optional, Tuple
+
+from pdfminer.utils import Rect
 from . import settings
-from .psparser import LIT
+from .pdfdocument import PDFDocument, PDFTextExtractionNotAllowed, \
+    PDFNoPageLabels
+from .pdfparser import PDFParser
+from .pdfparser import LIT
 from .pdftypes import PDFObjectNotFound
-from .pdftypes import resolve1
+from .pdftypes import dict_value
 from .pdftypes import int_value
 from .pdftypes import list_value
 from .pdftypes import dict_value
-from .pdfparser import PDFParser
+from .pdftypes import resolve1
 from .pdfdocument import PDFDocument, PDFTextExtractionNotAllowed
-
 
 log = logging.getLogger(__name__)
 
@@ -38,23 +42,27 @@ class PDFPage:
       rotate: the page rotation (in degree).
       annots: the page annotations.
       beads: a chain that represents natural reading order.
+      label: the page's label (typically, the logical page number).
     """
 
     def __init__(
         self,
         doc: PDFDocument,
         pageid: object,
-        attrs: object
+        attrs: object,
+        label: Optional[str]
     ) -> None:
         """Initialize a page object.
 
         doc: a PDFDocument object.
         pageid: any Python object that can uniquely identify the page.
         attrs: a dictionary of page attributes.
+        label: page label string.
         """
         self.doc = doc
         self.pageid = pageid
         self.attrs = dict_value(attrs)
+        self.label = label
         self.lastmod = resolve1(self.attrs.get('LastModified'))
         self.resources: Dict[object, object] = \
             resolve1(self.attrs.get('Resources', dict()))
@@ -73,7 +81,6 @@ class PDFPage:
         if not isinstance(contents, list):
             contents = [contents]
         self.contents: List[object] = contents
-        return
 
     def __repr__(self) -> str:
         return '<PDFPage: Resources={!r}, MediaBox={!r}>'\
@@ -110,11 +117,17 @@ class PDFPage:
             elif tree_type is LITERAL_PAGE:
                 log.info('Page: %r', tree)
                 yield (objid, tree)
+
+        try:
+            page_labels: Iterator[Optional[str]] = document.get_page_labels()
+        except PDFNoPageLabels:
+            page_labels = itertools.repeat(None)
+
         pages = False
         if 'Pages' in document.catalog:
             objects = search(document.catalog['Pages'], document.catalog)
             for (objid, tree) in objects:
-                yield cls(document, objid, tree)
+                yield cls(document, objid, tree, next(page_labels))
                 pages = True
         if not pages:
             # fallback when /Pages is missing.
@@ -124,7 +137,7 @@ class PDFPage:
                         obj = document.getobj(objid)
                         if isinstance(obj, dict) \
                                 and obj.get('Type') is LITERAL_PAGE:
-                            yield cls(document, objid, obj)
+                            yield cls(document, objid, obj, next(page_labels))
                     except PDFObjectNotFound:
                         pass
         return
@@ -153,7 +166,7 @@ class PDFPage:
                 warning_msg = 'The PDF %r contains a metadata field '\
                             'indicating that it should not allow '   \
                             'text extraction. Ignoring this field '  \
-                            'and proceeding. Use the check_extractable ' \
+                            'and proceeding. Use check_extractable ' \
                             'if you want to raise an error in this case' % fp
                 log.warning(warning_msg)
         # Process each page contained in the document.
