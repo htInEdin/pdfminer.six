@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - Replace warnings.warn with logging.Logger.warning in line with [recommended use](https://docs.python.org/3/howto/logging.html#when-to-use-logging) ([#673](https://github.com/pdfminer/pdfminer.six/pull/673))
+- Added a bit more information telling how much data-loss occurred when trying to fix CRC checksum error, raise PDFEncryptionError if settings.STRICT
 
 ### Removed
 - Unnecessary return statements without argument at the end of functions ([#707](https://github.com/pdfminer/pdfminer.six/pull/707))

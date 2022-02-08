@@ -235,7 +235,14 @@ def decompress_corrupted(data: bytes) -> bytes:
     except zlib.error:
         # Let the error propagates if we're not yet in the CRC checksum
         if i < len(data) - 3:
-            logger.warning("Data-loss while decompressing corrupted data")
+            msg = f"{len(data) - i} bytes of data-loss while decompressing " \
+                   "corrupted data"
+            if settings.STRICT:
+                # Import here to prevent circular import
+                from .pdfdocument import PDFEncryptionError
+                raise PDFEncryptionError(msg)
+            else:
+                logger.warning(msg)
     return result_str
 
 
