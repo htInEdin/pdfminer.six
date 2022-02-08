@@ -7,14 +7,12 @@ from . import settings
 from .pdfdocument import PDFDocument, PDFTextExtractionNotAllowed, \
     PDFNoPageLabels
 from .pdfparser import PDFParser
-from .pdfparser import LIT
 from .pdftypes import PDFObjectNotFound
 from .pdftypes import dict_value
 from .pdftypes import int_value
 from .pdftypes import list_value
-from .pdftypes import dict_value
 from .pdftypes import resolve1
-from .pdfdocument import PDFDocument, PDFTextExtractionNotAllowed
+from .psparser import LIT
 
 log = logging.getLogger(__name__)
 
